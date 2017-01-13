@@ -21,42 +21,62 @@ public class Main {
         Random randy = new Random();
         deck = new int[10];
         resetDeck();
-        int busts = 0;
+        int pushes = 0;
         int wins = 0;
+        int losses = 0;
         
         int iterations = 1000;
         int playerScore = 0;
+        int dealerScore = 0;
+        int hiddenCard = 0;
         double chanceOfWinning = 0;
         for (int i = 0; i < iterations; i++) {
+            try{
             //Create scenario, preform inital calculations
             playerScore = generateRandomScenario(randy);
+            //Give dealer first card, give dealer second card and hide it
+            dealerScore += hit(randy);
+            hiddenCard = hit(randy);
+            System.out.println("Dealer's hidden card: "+hiddenCard);
+            dealerScore += hiddenCard;
+            
             displayScenario();
-            chanceOfWinning = chanceOfWinning(playerScore);
+            //Calc chance of winning based off of dealer's one card
+            chanceOfWinning = chanceOfWinning(playerScore, hiddenCard);
+            //Give dealer last card
+            
             
             //Play out hand
-            while (chanceOfWinning >= 0.4) {
+            while (chanceOfWinning >= 0.5) {
                 playerScore += hit(randy);
                 System.out.println("Hit!: New Score: " + playerScore);
-                chanceOfWinning = chanceOfWinning(playerScore);
+                chanceOfWinning = chanceOfWinning(playerScore, hiddenCard);
             }
             
+            while(dealerScore <= 16){
+                dealerScore += hit(randy);
+                System.out.println("Dealer Hit!: New Score: " + dealerScore);
+            }
+            if(playerScore>21){playerScore = 0;}
+            if(dealerScore>21){dealerScore = 0;}
             
-            System.out.println(((playerScore>21) ? "Bust!" : "Stand!") 
-                    + ": Final Score: " + playerScore);
-            if(playerScore>21){busts++;}
-            else if(playerScore>19){wins++;}
+            if(playerScore == dealerScore){pushes++;System.out.println("P");}
+            else if(playerScore > dealerScore){wins++;System.out.println("W");}
+            else{losses++;System.out.println("L");}
             System.out.println("--------------------");
             resetDeck();
+            dealerScore = 0;
+            }catch(Exception e){System.out.println(hiddenCard);}
         }
-        System.out.println("Busts: " + busts);
         System.out.println("Wins: " + wins);
+        System.out.println("Losses: " + losses);
+        System.out.println("Pushes: " + pushes);
     }
     
    /**
     * Randomly chooses a few cards to be visible for calculation
     */
     public static int generateRandomScenario(Random r){
-        int numCardsVisible = r.nextInt(9) + 1; //min 1 for our dealer
         int playerScore = 0; //sum of player's two cards
         
         for (int i = 0; i < 2; i++) {
@@ -69,18 +89,6 @@ public class Main {
             deck[index]--;
             playerScore += index + 1;
             System.out.println("Player hand has a " + (index+1));
-        }
-        
-        while(numCardsVisible > 0){
-            int index = r.nextInt(12);
-            
-            if(index >= 9){
-                index = 9; //Since we combine all Jacks, Queens, and Kings
-            }
-            
-            if(deck[index] > 0){
-                deck[index]--; numCardsVisible--;
-            }
         }
         
         return playerScore;
@@ -107,17 +115,24 @@ public class Main {
     /**
     * Calculates chance of a positive outcome by hitting
     */
-    public static double chanceOfWinning(int playerScore){
+    public static double chanceOfWinning(int playerScore, int hiddenCard){
         int maxValue = 21 - playerScore; //Highest beneficial card value
         double chance = 0;
+        
+        //Calculate without knowing dealer's second card
+        deck[hiddenCard-1]++;
         
         if(maxValue > 10){maxValue = 10;}
         for (int i = 0; i < maxValue; i++) {
             chance += deck[i];
         }
         
-        System.out.println("Chance of success:" + chance/52);
-        return chance/52;
+        //Return second card to dealer
+        deck[hiddenCard-1]++;
+        int amtCards = numCards();
+        
+        System.out.println("Chance of success:" + chance/amtCards);
+        return chance/amtCards;
     }
     
     public static int numCards(){
@@ -138,7 +153,7 @@ public class Main {
         }
         
         deck[currCard-1]--;
-        if (card!=0) {
+        if (card!=0 ) {
             return currCard;
         }
         else{
